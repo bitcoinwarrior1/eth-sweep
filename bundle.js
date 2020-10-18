@@ -27,16 +27,25 @@ $(() => {
 
     window.ethereum.enable().then((accounts) => {
         account = accounts[0];
-        chainId = window.ethereum.getChainId();
-        init();
+        chainId = window.ethereum.chainId;
     }).catch(console.error);
 
     $("#ready").click(() => {
         to = $("transferTo").val();
+        parentElement.append(`
+        <div class="grid-container">
+            <div class="grid-items">ALL</div>
+            <div class="grid-items">ALL</div>
+            <div class="grid-items">ALL</div>
+            <div class="grid-items">
+                <button class="btn btn-danger" id="sweepAll">Sweep All</button>
+            </div>
+        </div>`);
+        init();
     });
 
     $("#sweepAll").click(() => {
-
+        
     });
 
     async function init() {
