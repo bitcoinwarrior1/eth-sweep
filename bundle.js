@@ -1,60 +1,25 @@
 (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 module.exports = {
-    REMOVE_LIQUIDITY: ["function removeLiquidity(uint256 amount, uint256 min_eth, uint256 min_tokens, uint256 deadline) view returns (uint256)"],
     ERC20: [
         "function balanceOf(address owner) view returns (uint256)",
         "function transfer(address to, uint amount) returns (bool)",
         "function allowance(address spender, address owner) view returns(uint256)",
         "function approve(address spender, uint amount) returns (bool)"
     ],
-    SERVICE: [ "function redeem(uint redeemTokens) external returns (uint)", "function exchangeRateCurrent() public returns (uint)" ],
-    NEST: [ "function checkPriceNow(address tokenAddress) public view returns (uint256 ethAmount, uint256 erc20Amount, uint256 blockNum)" ],
-    COFIX: [ "function addLiquidity(address token, uint amountETH, uint amountToken, uint liquidityMin, address to, uint deadline) external payable returns (uint liquidity)" ]
+
+    ERC721: [
+        "function ownerOf(address owner) view returns (address)"
+    ]
 };
 
 },{}],2:[function(require,module,exports){
-module.exports = {
-    //TODO fill up
-    "natives": { //Simply transfer directly to CoFix
-        "USDT": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
-        "HBTC": "0x0316EB71485b0Ab14103307bf65a021042c6d380"
-    },
-    "services": { //Withdraw and then put into CoFix, e.g. cDAI -> DAI, then deposit DAI
-        "cUSDT": "0xf650c3d88d12db855b8bf7d11be6c55a4e07dcc9"
-    },
-    "LP": { //Remove liquidity and put each pair in one by one or as a pair if compatible
-        "USDTUNI-V2": "0x9d68cee6774db71b5904aeea927e9652480fb227"
-    },
-    "CoFix": {
-        "CoFixRouter": "0x2878469c466638E8c0878bB86898073CA6C91b45"
-    },
-    "decimals": {
-        "USDT": 1e+6,
-        "HBTC": 1e+8,
-        "cUSDT": 1e+8,
-        "USDTUNI-V2": 1e+18
-    },
-    "NEST": {
-        "oracle": "0x7722891Ee45aD38AE05bDA8349bA4CF23cFd270F"
-    }
-};
-
-},{}],3:[function(require,module,exports){
-module.exports = {
-    NATIVES: "natives",
-    SERVICES: "services",
-    LP: "LP",
-    CoFix: "CoFix",
-    DECIMALS: "decimals"
-};
-
-},{}],4:[function(require,module,exports){
 const Ethers = require('ethers');
 const provider = new Ethers.providers.Web3Provider(web3.currentProvider);
-const { NATIVES, SERVICES, LP, CoFix, DECIMALS } = require("./Types");
-const tokenContracts = require("./TokenContracts");
-const { REMOVE_LIQUIDITY, ERC20, SERVICE, NEST, COFIX } = require("./ABI");
+const { ERC20, ERC721 } = require("./ABI");
 let account = null;
+let chainId = null;
+let transactionObjectsBatched = null;
+let to = null;
 
 $(() => {
 
@@ -62,157 +27,194 @@ $(() => {
 
     window.ethereum.enable().then((accounts) => {
         account = accounts[0];
+        chainId = window.ethereum.getChainId();
         init();
-    }).catch((err) => {
-        alert(JSON.stringify(err));
+    }).catch(console.error);
+
+    $("#ready").click(() => {
+        to = $("transferTo").val();
     });
 
-    function init() {
-        findEligibleLiquidity(account).then((balances) => {
-            buildResults(balances);
-        }).catch((err) => {
-            alert(JSON.stringify(err));
-        });
+    $("#sweepAll").click(() => {
+
+    });
+
+    async function init() {
+        let balancesMapping = await getTokenBalances();
+        setBatchedTransactionsObject(balancesMapping);
+        render(balancesMapping);
     }
 
-    async function findEligibleLiquidity() {
-        let balances = {};
-        let tokenKeys = Object.keys(tokenContracts);
-        for(let token of tokenKeys) {
-            switch (token) {
-                case NATIVES:
-                    balances.natives = await getBalancesMapping(tokenContracts[NATIVES]);
-                    break;
-                case SERVICES:
-                    // balances.services = await getBalancesMapping(tokenContracts[SERVICES]);
-                    break;
-                case LP:
-                    // balances.LP = await getBalancesMapping(tokenContracts[LP]);
-                    break;
+    async function getTokenBalances() {
+        let erc20Query = getQueryERC20Events(chainId, account);
+        let erc20Contracts = await getTokensContracts(erc20Query);
+        let erc721Query = getQueryERC721Events(chainId, account);
+        let erc721Contracts = await getTokensContracts(erc721Query);
+        let erc20Balances = await getAllERC20Balances(erc20Contracts);
+        let erc721Balances = await getAllERC721Balances(erc721Contracts);
+        return Object.assign(erc20Balances, erc721Balances);
+    }
+
+    function setBatchedTransactionsObject(balancesMapping) {
+
+    }
+
+    async function getAllERC721Balances(tokenAddresses) {
+        let erc721Balances = [];
+        for(let tokenAddress of tokenAddresses) {
+            let tokenIds = await getERC721Balance(""); //TODO
+            for(let tokenId of tokenIds) {
+                let balanceObj = {};
+                balanceObj.address = tokenAddress;
+                balanceObj.balance = tokenId;
+                balanceObj.type = "ERC721";
+                erc721Balances.push(balanceObj);
             }
         }
-        return balances;
+        return erc721Balances;
     }
 
-    async function getBalancesMapping(tokenObject) {
-        let balancesMapping = {};
-        const tokens = Object.keys(tokenObject);
-        for(let token of tokens) {
-            const contract = new Ethers.Contract(tokenObject[token], ERC20, provider);
-            const balance = await contract.balanceOf(account);
-            if(balance > 0) {
-                balancesMapping[token] = balance; //don't add zero balances
-            }
+    async function getAllERC20Balances(tokenAddresses) {
+        let erc20Balances = [];
+        for(let tokenAddress of tokenAddresses) {
+            let balance = await getERC20Balance(chainId, tokenAddress);
+            let balanceObj = {};
+            balanceObj.address = tokenAddress;
+            balanceObj.balance = balance;
+            balanceObj.type = "ERC20";
+            erc20Balances.push(balanceObj);
         }
-        return balancesMapping;
+        return erc20Balances;
     }
 
-    function buildResults(balances) {
-        let balancesKeys = Object.keys(balances);
-        balancesKeys.map((key) => {
-            render(balances[key], key);
-        });
+    async function getERC721Balance(query) {
+        let tokenIds = [];
+        try {
+            let results = await $.get(query).result;
+            for(let result of results) {
+                let stillOwned = await getStillOwnedERC721(result.tokenID, result.contractAddress, account);
+                if(stillOwned) {
+                    tokenIds.push(result.tokenID);
+                }
+            }
+            return tokenIds;
+        } catch(e) {
+            console.error(e);
+        }
     }
 
-    function render(balancesOfType, type) {
-        let keys = Object.keys(balancesOfType);
-        for(let key of keys) {
+    async function getStillOwnedERC721(tokenId, contractAddress) {
+        try {
+            const contract = new Ethers.Contract(contractAddress, ERC20, provider);
+            return await contract.ownerOf(tokenId) === account;
+        } catch(e) {
+            console.error(e);
+        }
+    }
+
+    async function getERC20Balance(contractAddress) {
+        try {
+            const contract = new Ethers.Contract(contractAddress, ERC20, provider);
+            return await contract.balanceOf(account);
+        } catch(e) {
+            console.error(e);
+        }
+    }
+
+    //get's all the tokens a user has interacted with
+    async function getTokensContracts(query) {
+        try {
+            let tokens = [];
+            let results = await $.get(query).result;
+            for(let result of results) {
+                if(!tokens.includes(result.contractAddress)) {
+                    tokens.push(result.contractAddress);
+                }
+            }
+            return tokens;
+        } catch(e) {
+            console.error(e);
+        }
+    }
+
+    function getQueryERC20Events(chainId) {
+        switch (chainId) {
+            case 1:
+                return "https://api.etherscan.io/api?module=account&action=tokentx&address=" + account;
+            case 3:
+                return "https://ropsten.etherscan.io/api?module=account&action=tokentx&address=" + account;
+            case 4:
+                return "https://rinkeby.etherscan.io/api?module=account&action=tokentx&address=" + account;
+            case 42:
+                return "https://kovan.etherscan.io/api?module=account&action=tokentx&address=" + account;
+            default:
+                return "https://api.etherscan.io/api?module=account&action=tokentx&address=" + account;
+        }
+    }
+
+    function getQueryERC721Events(chainId) {
+        switch (chainId) {
+            case 1:
+                return "https://api.etherscan.io/api?module=account&action=tokennfttx&address=" + account;
+            case 3:
+                return "https://ropsten.etherscan.io/api?module=account&action=tokennfttx&address=" + account;
+            case 4:
+                return "https://rinkeby.etherscan.io/api?module=account&action=tokennfttx&address=" + account;
+            case 42:
+                return "https://kovan.etherscan.io/api?module=account&action=tokennfttx&address=" + account;
+            default:
+                return "https://api.etherscan.io/api?module=account&action=tokennfttx&address=" + account;
+        }
+    }
+
+    function getEtherScanPage(chainId) {
+        switch (chainId) {
+            case 1:
+                return "https://etherscan.io/address/";
+            case 3:
+                return "https://ropsten.etherscan.io/address/";
+            case 4:
+                return "https://rinkeby.etherscan.io/address/";
+            case 42:
+                return "https://kovan.etherscan.io/address/";
+            default:
+                return "https://etherscan.io/address/";
+        }
+    }
+
+    function render(balancesMapping) {
+        let balances = Object.keys(balancesMapping);
+        let index = 0;
+        for(let balance of balances) {
             parentElement.append(
                 `<div class="grid-container">
-                    <div class="grid-items">${key}</div>
-                    <div class="grid-items">${(balancesOfType[key] / tokenContracts[DECIMALS][key]).toFixed(3)}</div>
+                    <div class="grid-items">${balance.name}</div>
+                    <div class="grid-items">${balance.balance}</div>
+                    <div class="grid-items">${balance.type}</div>
                     <div class="grid-items">
-                        <button class="btn btn-primary" id="${key}"> Add liquidity</button>
+                        <button class="btn btn-primary" id="${balance.address}"> Transfer</button>
                     </div>
                 </div>`
             );
-            const elementId = `#${key}`;
-            switch (type) {
-                case NATIVES:
-                    $(elementId).click(() => {
-                        migrate(tokenContracts[NATIVES][key], balancesOfType[key]);
-                    });
-                    break;
-                case SERVICES:
-                    break;
-                case LP:
-                    break;
-            }
+            const elementId = `#${index}`;
+            setOnClick(elementId, balance);
+            index++;
         }
     }
 
-    async function checkIfApproved(contractAddress, spender) {
-        const contract = new Ethers.Contract(contractAddress, ERC20, provider); //.connect(provider.getSigner(account));
-        const allowance = await contract.allowance(account, spender);
-        return allowance > 0;
-    }
-
-    async function getOraclePrice(tokenAddress) {
-        const NEST_ORACLE = tokenContracts.NEST.oracle;
-        const contract = new Ethers.Contract(NEST_ORACLE, NEST, provider);
-        return await contract.checkPriceNow(tokenAddress);
-    }
-
-    async function getDeadline() {
-        //TODO find a way to set the deadline appropriately
-        return await provider.getBlockNumber() + 100;
-    }
-
-    function migrate(tokenContract, tokenAmount) {
-        const cofixContract = tokenContracts.CoFix.CoFixRouter;
-        checkIfApproved(tokenContract, cofixContract).then((approved) => {
-            if(!approved) {
-                const contractToApprove = new Ethers.Contract(tokenContract, ERC20, provider).connect(provider.getSigner(account));
-                contractToApprove.approve(cofixContract, "0xffffffffffffffffffffffffffffffffffffffff").then((result) => {
-                    console.log("Approval result: ", result);
-                    executeMigration(cofixContract, tokenContract, 0, tokenAmount, 0, account, Date.parse(new Date()) / 1000 + 600);
-                }).catch((err) => {
-                    alert(JSON.stringify(err));
-                });
-            } else {
-                    executeMigration(cofixContract, tokenContract, 0, tokenAmount, 0, account, Date.parse(new Date()) / 1000 + 600);
-            }
-        }).catch((err) => {
-            alert(JSON.stringify(err));
-        });
-    }
-
-    function executeMigration(cofixAddress, tokenContract, amountETH, amountToken, liquidityMin, to, deadline) {
-        const oracleFee = "0xB1A2BC2EC50000";
-        const contract = new Ethers.Contract(cofixAddress, COFIX, provider).connect(provider.getSigner(account));
-        //TODO add case for ETH deposits
-        contract.addLiquidity(tokenContract, amountETH, amountToken, liquidityMin, to, deadline, { from: account, value: oracleFee }).then((result) => {
-            alert("minted " + result + " tokens in the pool");
-        }).catch((err) => {
-            console.log(JSON.stringify(err));
-        });
-    }
-
-    function withdrawThenMigrate(contractAddress, to, amount) {
-        const contract = new Ethers.Contract(contractAddress, SERVICE, provider).connect(provider.getSigner(account));
-        contract.redeem(amount).then((result) => {
-            if(result > 0) { //operation passed
-                contract.exchangeRateCurrent.then((rate) => {
-                    let redeemed =  amount / (rate / 1e+28);
-                    migrate(contractAddress, to, redeemed);
-                })
-            } else {
-                alert("redeeming failed!");
-            }
-        }).catch((err) => {
-            alert(JSON.stringify(err));
-        });
-    }
-
-    //TODO
-    function pullLiquidityThenMigrate(contractAddress, to, amount) {
-        const contract = new Ethers.Contract(contractAddress, REMOVE_LIQUIDITY, provider).connect(provider.getSigner(account));
+    function setOnClick(id, balanceObj) {
+        $(id).click(() => {
+            const contract = new Ethers.Contract(balanceObj.address, ERC20, provider);
+            contract.transfer(to, balanceObj.balance).then((result) => {
+                console.log(result);
+            }).catch(console.error);
+        })
     }
 
 });
 
 
-},{"./ABI":1,"./TokenContracts":2,"./Types":3,"ethers":6}],5:[function(require,module,exports){
+},{"./ABI":1,"ethers":4}],3:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -398,7 +400,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],6:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
 (function (process,global,setImmediate){
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
@@ -27248,7 +27250,7 @@ process.umask = function() { return 0; };
 }));
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("timers").setImmediate)
-},{"_process":5,"timers":7}],7:[function(require,module,exports){
+},{"_process":3,"timers":5}],5:[function(require,module,exports){
 (function (setImmediate,clearImmediate){
 var nextTick = require('process/browser.js').nextTick;
 var apply = Function.prototype.apply;
@@ -27327,6 +27329,6 @@ exports.clearImmediate = typeof clearImmediate === "function" ? clearImmediate :
   delete immediateIds[id];
 };
 }).call(this,require("timers").setImmediate,require("timers").clearImmediate)
-},{"process/browser.js":8,"timers":7}],8:[function(require,module,exports){
-arguments[4][5][0].apply(exports,arguments)
-},{"dup":5}]},{},[4]);
+},{"process/browser.js":6,"timers":5}],6:[function(require,module,exports){
+arguments[4][3][0].apply(exports,arguments)
+},{"dup":3}]},{},[2]);
