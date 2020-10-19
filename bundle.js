@@ -18,7 +18,7 @@ const provider = new Ethers.providers.Web3Provider(web3.currentProvider);
 const { ERC20, ERC721 } = require("./ABI");
 let account = null;
 let chainId = null;
-let transactionObjectsBatched = null;
+let transactionObjectsBatched = [];
 let to = null;
 
 $(() => {
@@ -45,7 +45,9 @@ $(() => {
     });
 
     $("#sweepAll").click(() => {
-        
+        Promise.all(transactionObjectsBatched).then(function(results) {
+            console.log(results);
+        })
     });
 
     async function init() {
@@ -65,7 +67,11 @@ $(() => {
     }
 
     function setBatchedTransactionsObject(balancesMapping) {
-
+        for(let balanceObj of balancesMapping) {
+            let contract = new Ethers.Contract(balanceObj.address, ERC20).connect(provider);
+            let transaction = contract.transfer(to, balanceObj.balance);
+            transactionObjectsBatched.push(transaction);
+        }
     }
 
     async function getAllERC721Balances(tokenAddresses) {
