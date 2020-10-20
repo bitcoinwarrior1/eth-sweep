@@ -3,7 +3,6 @@ const provider = new Ethers.providers.Web3Provider(web3.currentProvider);
 const { ERC20, ERC721 } = require("./ABI");
 let account = null;
 let chainId = null;
-let transactionObjectsBatched = [];
 let to = null;
 
 $(() => {
@@ -15,30 +14,57 @@ $(() => {
         chainId = window.ethereum.chainId;
     }).catch(console.error);
 
-    $("#ready").click(() => {
+    $("#ready").click(async () => {
         to = $("#transferTo").val();
         parentElement.append(`
+        <div class="grid-container">
+            <div class="grid-items">ETH</div>
+            <div class="grid-items">${await provider.getBalance(account) / 1e+18}</div>
+            <div class="grid-items">Ether</div>
+            <div class="grid-items">
+                <button class="btn btn-danger" id="sweepAllETH">Sweep All ETH</button>
+            </div>
+        </div>
         <div class="grid-container">
             <div class="grid-items">ALL</div>
             <div class="grid-items">ALL</div>
             <div class="grid-items">ALL</div>
             <div class="grid-items">
-                <button class="btn btn-danger" id="sweepAll">Sweep All</button>
+                <button class="btn btn-danger" id="sweepAllTokens">Sweep All Tokens</button>
             </div>
         </div>`);
         const _ = init();
     });
 
-    $("#sweepAll").click(() => {
-        Promise.all(transactionObjectsBatched).then(function(results) {
-            console.log(results);
-        })
-    });
-
     async function init() {
         let balancesMapping = await getTokenBalances();
-        //setBatchedTransactionsObject(balancesMapping);
         render(balancesMapping);
+        setSweepButtons(balancesMapping);
+    }
+
+    function setSweepButtons(balancesMapping) {
+        $("#sweepAllTokens").click(() => {
+            balancesMapping.map((balanceObj) => {
+                let contract = new Ethers.Contract(balanceObj.address, ERC20).connect(provider.getSigner());
+                contract.transfer(to, balanceObj.balance);
+            });
+        });
+        $("#sweepAllETH").click(() => {
+            sendAllEth().then(console.log).catch(console.error);
+        });
+    }
+
+    async function sendAllEth() {
+        const userBalanceEth = await provider.getBalance(account);
+        const gasPrice = await provider.getGasPrice();
+        let txObj = {
+            to: to,
+            value: userBalanceEth
+        };
+        const gasLimit = await provider.estimateGas(txObj);
+        const totalCost = Ethers.BigNumber.from(gasLimit).mul(Ethers.BigNumber.from(gasPrice));
+        txObj.value = userBalanceEth.sub(totalCost);
+        provider.getSigner().sendTransaction(txObj);
     }
 
     async function getTokenBalances() {
@@ -49,14 +75,6 @@ $(() => {
         let erc20Balances = await getAllERC20Balances(erc20Contracts);
         // let erc721Balances = await getAllERC721Balances(erc721Contracts);
         return  erc20Balances; //Object.assign(erc20Balances, erc721Balances);
-    }
-
-    function setBatchedTransactionsObject(balancesMapping) {
-        for(let balanceObj of balancesMapping) {
-            let contract = new Ethers.Contract(balanceObj.address, ERC20).connect(provider);
-            let transaction = contract.transfer(to, balanceObj.balance);
-            transactionObjectsBatched.push(transaction);
-        }
     }
 
     async function getAllERC721Balances(tokenAddresses) {
