@@ -16,7 +16,7 @@ $(() => {
     }).catch(console.error);
 
     $("#ready").click(() => {
-        to = $("transferTo").val();
+        to = $("#transferTo").val();
         parentElement.append(`
         <div class="grid-container">
             <div class="grid-items">ALL</div>
@@ -26,7 +26,7 @@ $(() => {
                 <button class="btn btn-danger" id="sweepAll">Sweep All</button>
             </div>
         </div>`);
-        init();
+        const _ = init();
     });
 
     $("#sweepAll").click(() => {
@@ -37,18 +37,18 @@ $(() => {
 
     async function init() {
         let balancesMapping = await getTokenBalances();
-        setBatchedTransactionsObject(balancesMapping);
+        //setBatchedTransactionsObject(balancesMapping);
         render(balancesMapping);
     }
 
     async function getTokenBalances() {
         let erc20Query = getQueryERC20Events(chainId, account);
         let erc20Contracts = await getTokensContracts(erc20Query);
-        let erc721Query = getQueryERC721Events(chainId, account);
-        let erc721Contracts = await getTokensContracts(erc721Query);
+        // let erc721Query = getQueryERC721Events(chainId, account);
+        /// let erc721Contracts = await getTokensContracts(erc721Query);
         let erc20Balances = await getAllERC20Balances(erc20Contracts);
-        let erc721Balances = await getAllERC721Balances(erc721Contracts);
-        return Object.assign(erc20Balances, erc721Balances);
+        // let erc721Balances = await getAllERC721Balances(erc721Contracts);
+        return  erc20Balances; //Object.assign(erc20Balances, erc721Balances);
     }
 
     function setBatchedTransactionsObject(balancesMapping) {
@@ -74,15 +74,19 @@ $(() => {
         return erc721Balances;
     }
 
-    async function getAllERC20Balances(tokenAddresses) {
+    async function getAllERC20Balances(erc20Contracts) {
         let erc20Balances = [];
-        for(let tokenAddress of tokenAddresses) {
-            let balance = await getERC20Balance(chainId, tokenAddress);
+        for(let index in erc20Contracts.contractAddresses) {
+            let contractAddress = erc20Contracts.contractAddresses[index];
+            let balance = await getERC20Balance(contractAddress);
             let balanceObj = {};
-            balanceObj.address = tokenAddress;
+            balanceObj.address = contractAddress;
             balanceObj.balance = balance;
             balanceObj.type = "ERC20";
-            erc20Balances.push(balanceObj);
+            balanceObj.name = erc20Contracts.tokenNames[index];
+            if(balance != 0) {
+                erc20Balances.push(balanceObj);
+            }
         }
         return erc20Balances;
     }
@@ -90,7 +94,8 @@ $(() => {
     async function getERC721Balance(query) {
         let tokenIds = [];
         try {
-            let results = await $.get(query).result;
+            let call = await $.get(query);
+            let results = call.result;
             for(let result of results) {
                 let stillOwned = await getStillOwnedERC721(result.tokenID, result.contractAddress, account);
                 if(stillOwned) {
@@ -105,7 +110,7 @@ $(() => {
 
     async function getStillOwnedERC721(tokenId, contractAddress) {
         try {
-            const contract = new Ethers.Contract(contractAddress, ERC20, provider);
+            const contract = new Ethers.Contract(contractAddress, ERC20).connect(provider);
             return await contract.ownerOf(tokenId) === account;
         } catch(e) {
             console.error(e);
@@ -114,7 +119,7 @@ $(() => {
 
     async function getERC20Balance(contractAddress) {
         try {
-            const contract = new Ethers.Contract(contractAddress, ERC20, provider);
+            const contract = new Ethers.Contract(contractAddress, ERC20).connect(provider);
             return await contract.balanceOf(account);
         } catch(e) {
             console.error(e);
@@ -124,14 +129,20 @@ $(() => {
     //get's all the tokens a user has interacted with
     async function getTokensContracts(query) {
         try {
+            let tokensObj = {};
             let tokens = [];
-            let results = await $.get(query).result;
+            let tokenNames = [];
+            let call = await $.get(query);
+            let results = call.result;
             for(let result of results) {
                 if(!tokens.includes(result.contractAddress)) {
                     tokens.push(result.contractAddress);
+                    tokenNames.push(result.tokenName);
                 }
             }
-            return tokens;
+            tokensObj.tokenNames = tokenNames;
+            tokensObj.contractAddresses = tokens;
+            return tokensObj;
         } catch(e) {
             console.error(e);
         }
@@ -183,28 +194,27 @@ $(() => {
     }
 
     function render(balancesMapping) {
-        let balances = Object.keys(balancesMapping);
         let index = 0;
-        for(let balance of balances) {
+        for(let balanceObj of balancesMapping) {
             parentElement.append(
                 `<div class="grid-container">
-                    <div class="grid-items">${balance.name}</div>
-                    <div class="grid-items">${balance.balance}</div>
-                    <div class="grid-items">${balance.type}</div>
+                    <div class="grid-items">${balanceObj.name}</div>
+                    <div class="grid-items">${balanceObj.balance}</div>
+                    <div class="grid-items">${balanceObj.type}</div>
                     <div class="grid-items">
-                        <button class="btn btn-primary" id="${balance.address}"> Transfer</button>
+                        <button class="btn btn-primary" id="${index}"> Transfer</button>
                     </div>
                 </div>`
             );
             const elementId = `#${index}`;
-            setOnClick(elementId, balance);
+            setOnClick(elementId, balanceObj);
             index++;
         }
     }
 
     function setOnClick(id, balanceObj) {
         $(id).click(() => {
-            const contract = new Ethers.Contract(balanceObj.address, ERC20, provider);
+            const contract = new Ethers.Contract(balanceObj.address, ERC20).connect(provider.getSigner(account));
             contract.transfer(to, balanceObj.balance).then((result) => {
                 console.log(result);
             }).catch(console.error);
