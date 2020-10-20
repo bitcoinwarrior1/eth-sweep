@@ -99,6 +99,11 @@ $(() => {
             balanceObj.balance = balance;
             balanceObj.type = "ERC20";
             balanceObj.name = erc20Contracts.tokenNames[index];
+            if(erc20Contracts.decimals[index] == 0) {
+                balanceObj.decimals = 1;
+            } else {
+                balanceObj.decimals = "1e+" + erc20Contracts.decimals[index];
+            }
             if(balance != 0) {
                 erc20Balances.push(balanceObj);
             }
@@ -147,16 +152,19 @@ $(() => {
             let tokensObj = {};
             let tokens = [];
             let tokenNames = [];
+            let tokenDecimals = [];
             let call = await $.get(query);
             let results = call.result;
             for(let result of results) {
                 if(!tokens.includes(result.contractAddress)) {
                     tokens.push(result.contractAddress);
                     tokenNames.push(result.tokenName);
+                    tokenDecimals.push(result.tokenDecimal);
                 }
             }
             tokensObj.tokenNames = tokenNames;
             tokensObj.contractAddresses = tokens;
+            tokensObj.decimals = tokenDecimals;
             return tokensObj;
         } catch(e) {
             console.error(e);
@@ -214,7 +222,7 @@ $(() => {
             parentElement.append(
                 `<div class="grid-container">
                     <div class="grid-items">${balanceObj.name}</div>
-                    <div class="grid-items">${balanceObj.balance}</div>
+                    <div class="grid-items">${parseInt(balanceObj.balance) / parseFloat(balanceObj.decimals)}</div>
                     <div class="grid-items">${balanceObj.type}</div>
                     <div class="grid-items">
                         <button class="btn btn-primary" id="${index}"> Transfer</button>
