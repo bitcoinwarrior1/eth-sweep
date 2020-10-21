@@ -8,5 +8,5 @@ A simple web tool that allows you to sweep your wallet of ETH, erc20 & erc721 to
 
 ## Limitations 
 * If you deposit tokens somewhere they will not be visible unless they themselves are tokenised e.g. cDAI
-* Sending all your eth should be done after the tokens are sweeped as it is impossible to exactly calculate how much eth you will need in gas fees. 
+* Sending all your eth should be done after the tokens are swept as it is impossible to exactly calculate how much eth you will need in gas fees. 
 
