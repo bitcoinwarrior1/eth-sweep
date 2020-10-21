@@ -17,6 +17,11 @@ $(() => {
 
     $("#ready").click(async () => {
         to = $("#transferTo").val();
+        const isAddress = Ethers.utils.isAddress(to);
+        if(!isAddress) {
+            alert("Invalid address provided, please try again");
+            return;
+        }
         parentElement.append(`
         <div class="grid-container">
             <div class="grid-items">ETH</div>
