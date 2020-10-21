@@ -27,7 +27,7 @@ $(() => {
 
     window.ethereum.enable().then((accounts) => {
         account = accounts[0];
-        chainId = window.ethereum.chainId;
+        chainId = parseInt(window.ethereum.chainId);
     }).catch(console.error);
 
     $("#ready").click(async () => {
