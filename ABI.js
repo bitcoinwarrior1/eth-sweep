@@ -7,6 +7,6 @@ module.exports = {
     ],
 
     ERC721: [
-        "function ownerOf(address owner) view returns (address)"
+        "function ownerOf(uint256 _tokenId) external view returns (address)"
     ]
 };

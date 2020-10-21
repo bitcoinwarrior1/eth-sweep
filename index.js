@@ -4,6 +4,7 @@ const { ERC20, ERC721 } = require("./ABI");
 let account = null;
 let chainId = null;
 let to = null;
+const APIKeyString = "&apikey=ANVBH7JCNH1BVHJ1NPB5FH1WKP5C6YSYJW";
 
 $(() => {
 
@@ -68,25 +69,36 @@ $(() => {
     }
 
     async function getTokenBalances() {
-        let erc20Query = getQueryERC20Events(chainId, account);
-        let erc20Contracts = await getTokensContracts(erc20Query);
-        // let erc721Query = getQueryERC721Events(chainId, account);
-        /// let erc721Contracts = await getTokensContracts(erc721Query);
-        let erc20Balances = await getAllERC20Balances(erc20Contracts);
-        // let erc721Balances = await getAllERC721Balances(erc721Contracts);
-        return  erc20Balances; //Object.assign(erc20Balances, erc721Balances);
+        let erc20TokensObj = await getERC20Tokens();
+        let erc721TokensObj = await getERC721Tokens();
+        let erc20Balances = await getAllERC20Balances(erc20TokensObj);
+        let erc721Balances = await getAllERC721Balances(erc721TokensObj);
+        return Object.assign(erc20Balances, erc721Balances);
     }
 
-    async function getAllERC721Balances(tokenAddresses) {
+    function uniq(a) {
+        let seen = {};
+        return a.filter(function(item) {
+            return seen.hasOwnProperty(item) ? false : (seen[item] = true);
+        });
+    }
+
+    async function getAllERC721Balances(tokensObj) {
         let erc721Balances = [];
-        for(let tokenAddress of tokenAddresses) {
-            let tokenIds = await getERC721Balance(""); //TODO
-            for(let tokenId of tokenIds) {
-                let balanceObj = {};
-                balanceObj.address = tokenAddress;
-                balanceObj.balance = tokenId;
-                balanceObj.type = "ERC721";
-                erc721Balances.push(balanceObj);
+        let contracts = uniq(tokensObj.contractAddresses);
+        let names = uniq(tokensObj.tokenNames);
+        for(let index in contracts) {
+            for(let tokenId of tokensObj.tokenIds[contracts[index]]) {
+                let stillOwned = await getStillOwnedERC721(tokenId, contracts[index]);
+                if(stillOwned) {
+                    let balanceObj = {};
+                    balanceObj.address = contracts[index];
+                    balanceObj.type = "ERC721";
+                    balanceObj.balance = tokenId;
+                    balanceObj.decimals = 0;
+                    balanceObj.name = names[index];
+                    erc721Balances.push(balanceObj);
+                }
             }
         }
         return erc721Balances;
@@ -114,27 +126,12 @@ $(() => {
         return erc20Balances;
     }
 
-    async function getERC721Balance(query) {
-        let tokenIds = [];
-        try {
-            let call = await $.get(query);
-            let results = call.result;
-            for(let result of results) {
-                let stillOwned = await getStillOwnedERC721(result.tokenID, result.contractAddress, account);
-                if(stillOwned) {
-                    tokenIds.push(result.tokenID);
-                }
-            }
-            return tokenIds;
-        } catch(e) {
-            console.error(e);
-        }
-    }
-
     async function getStillOwnedERC721(tokenId, contractAddress) {
         try {
-            const contract = new Ethers.Contract(contractAddress, ERC20).connect(provider);
-            return await contract.ownerOf(tokenId) === account;
+            const contract = new Ethers.Contract(contractAddress, ERC721).connect(provider);
+            let owner = await contract.ownerOf(tokenId);
+            let stillOwned = owner.toLowerCase() === account.toLowerCase();
+            return stillOwned;
         } catch(e) {
             console.error(e);
         }
@@ -150,13 +147,14 @@ $(() => {
     }
 
     //get's all the tokens a user has interacted with
-    async function getTokensContracts(query) {
+    async function getERC20Tokens() {
+        let erc20Query = getQueryERC20Events(chainId, account);
         try {
             let tokensObj = {};
             let tokens = [];
             let tokenNames = [];
             let tokenDecimals = [];
-            let call = await $.get(query);
+            let call = await $.get(erc20Query);
             let results = call.result;
             for(let result of results) {
                 if(!tokens.includes(result.contractAddress)) {
@@ -174,58 +172,79 @@ $(() => {
         }
     }
 
+    //get's all the tokens a user has interacted with
+    async function getERC721Tokens() {
+        let erc721Query = getQueryERC721Events(chainId, account);
+        try {
+            let tokensObj = {};
+            let tokens = [];
+            let tokenNames = [];
+            let tokenDecimals = [];
+            let tokenIds = {}; // NB: this must be checked to see if still owned
+            let call = await $.get(erc721Query);
+            let results = call.result;
+            for(let result of results) {
+                tokens.push(result.contractAddress);
+                tokenNames.push(result.tokenName);
+                tokenDecimals.push(result.tokenDecimal);
+                if (tokenIds[result.contractAddress] === undefined) {
+                    tokenIds[result.contractAddress] = [];
+                }
+                if(!tokenIds[result.contractAddress].includes(result.tokenID)) {
+                    tokenIds[result.contractAddress].push(result.tokenID);
+                }
+            }
+            tokensObj.tokenNames = tokenNames;
+            tokensObj.contractAddresses = tokens;
+            tokensObj.decimals = tokenDecimals;
+            tokensObj.tokenIds = tokenIds;
+            return tokensObj;
+        } catch(e) {
+            console.error(e);
+        }
+    }
+
     function getQueryERC20Events(chainId) {
         switch (chainId) {
             case 1:
-                return "https://api.etherscan.io/api?module=account&action=tokentx&address=" + account;
+                return "https://api.etherscan.io/api?module=account&action=tokentx&address=" + account + APIKeyString;
             case 3:
-                return "https://ropsten.etherscan.io/api?module=account&action=tokentx&address=" + account;
+                return "https://ropsten.etherscan.io/api?module=account&action=tokentx&address=" + account + APIKeyString;
             case 4:
-                return "https://rinkeby.etherscan.io/api?module=account&action=tokentx&address=" + account;
+                return "https://rinkeby.etherscan.io/api?module=account&action=tokentx&address=" + account + APIKeyString;
             case 42:
-                return "https://kovan.etherscan.io/api?module=account&action=tokentx&address=" + account;
+                return "https://kovan.etherscan.io/api?module=account&action=tokentx&address=" + account + APIKeyString;
             default:
-                return "https://api.etherscan.io/api?module=account&action=tokentx&address=" + account;
+                return "https://api.etherscan.io/api?module=account&action=tokentx&address=" + account + APIKeyString;
         }
     }
 
     function getQueryERC721Events(chainId) {
         switch (chainId) {
             case 1:
-                return "https://api.etherscan.io/api?module=account&action=tokennfttx&address=" + account;
+                return "https://api.etherscan.io/api?module=account&action=tokennfttx&address=" + account + APIKeyString;
             case 3:
-                return "https://ropsten.etherscan.io/api?module=account&action=tokennfttx&address=" + account;
+                return "https://ropsten.etherscan.io/api?module=account&action=tokennfttx&address=" + account + APIKeyString;
             case 4:
-                return "https://rinkeby.etherscan.io/api?module=account&action=tokennfttx&address=" + account;
+                return "https://rinkeby.etherscan.io/api?module=account&action=tokennfttx&address=" + account + APIKeyString;
             case 42:
-                return "https://kovan.etherscan.io/api?module=account&action=tokennfttx&address=" + account;
+                return "https://kovan.etherscan.io/api?module=account&action=tokennfttx&address=" + account + APIKeyString;
             default:
-                return "https://api.etherscan.io/api?module=account&action=tokennfttx&address=" + account;
-        }
-    }
-
-    function getEtherScanPage(chainId) {
-        switch (chainId) {
-            case 1:
-                return "https://etherscan.io/address/";
-            case 3:
-                return "https://ropsten.etherscan.io/address/";
-            case 4:
-                return "https://rinkeby.etherscan.io/address/";
-            case 42:
-                return "https://kovan.etherscan.io/address/";
-            default:
-                return "https://etherscan.io/address/";
+                return "https://api.etherscan.io/api?module=account&action=tokennfttx&address=" + account + APIKeyString;
         }
     }
 
     function render(balancesMapping) {
         let index = 0;
         for(let balanceObj of balancesMapping) {
+            let balance = balanceObj.balance;
+            if(balanceObj.type === "ERC20") {
+                balance = parseInt(balanceObj.balance) / parseFloat(balanceObj.decimals);
+            }
             parentElement.append(
                 `<div class="grid-container">
                     <div class="grid-items">${balanceObj.name}</div>
-                    <div class="grid-items">${parseInt(balanceObj.balance) / parseFloat(balanceObj.decimals)}</div>
+                    <div class="grid-items">${balance}</div>
                     <div class="grid-items">${balanceObj.type}</div>
                     <div class="grid-items">
                         <button class="btn btn-primary" id="${index}"> Transfer</button>
