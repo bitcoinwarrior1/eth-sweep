@@ -21,6 +21,8 @@ $(() => {
         if(!isAddress) {
             alert("Invalid address provided, please try again");
             return;
+        } else {
+            $("#loading").show();
         }
         parentElement.append(`
         <div class="grid-container">
@@ -240,6 +242,7 @@ $(() => {
     }
 
     function render(balancesMapping) {
+        $("#loading").hide();
         let index = 0;
         for(let balanceObj of balancesMapping) {
             let balance = balanceObj.balance;
