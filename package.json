@@ -1,25 +1,50 @@
 {
-  "name": "cofix-liquidity-manager",
-  "version": "1.0.0",
-  "description": "a simple tool that lets you transfer your liquidity to CoFix",
-  "main": "index.js",
-  "scripts": {
-    "build": "watchify index.js -o bundle.js"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/James-Sangalli/eth-swap.git"
-  },
-  "author": "James Sangalli",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/James-Sangalli/eth-swap/issues"
-  },
-  "homepage": "https://github.com/James-Sangalli/eth-swap#readme",
+  "name": "eth-sweep",
+  "version": "0.1.0",
+  "private": false,
+  "homepage": "https://james-sangalli.github.io/eth-sweep/",
   "dependencies": {
-    "ethers": "^5.0.9"
+    "@testing-library/jest-dom": "^5.11.4",
+    "@testing-library/react": "^11.1.0",
+    "@testing-library/user-event": "^12.1.10",
+    "bootstrap": "^3.3.7",
+    "ethers": "^5.0.9",
+    "react": "^17.0.1",
+    "react-dom": "^17.0.1",
+    "react-scripts": "4.0.1",
+    "superagent": "^6.1.0",
+    "web-vitals": "^0.2.4"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "test-helpers": "mocha --exit --recursive --timeout 500000",
+    "eject": "react-scripts eject",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d build"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
   },
   "devDependencies": {
-    "watchify": "^3.9.0"
+    "chai": "^4.3.4",
+    "gh-pages": "^3.1.0",
+    "mocha": "^8.3.2"
   }
 }
