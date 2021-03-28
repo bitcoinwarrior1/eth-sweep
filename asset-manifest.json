@@ -1,0 +1,26 @@
+{
+  "files": {
+    "main.css": "/eth-sweep/static/css/main.113531c6.chunk.css",
+    "main.js": "/eth-sweep/static/js/main.fd90aec7.chunk.js",
+    "main.js.map": "/eth-sweep/static/js/main.fd90aec7.chunk.js.map",
+    "runtime-main.js": "/eth-sweep/static/js/runtime-main.4e62bfb6.js",
+    "runtime-main.js.map": "/eth-sweep/static/js/runtime-main.4e62bfb6.js.map",
+    "static/css/2.7b349aaa.chunk.css": "/eth-sweep/static/css/2.7b349aaa.chunk.css",
+    "static/js/2.313d7d11.chunk.js": "/eth-sweep/static/js/2.313d7d11.chunk.js",
+    "static/js/2.313d7d11.chunk.js.map": "/eth-sweep/static/js/2.313d7d11.chunk.js.map",
+    "static/js/3.365bc39a.chunk.js": "/eth-sweep/static/js/3.365bc39a.chunk.js",
+    "static/js/3.365bc39a.chunk.js.map": "/eth-sweep/static/js/3.365bc39a.chunk.js.map",
+    "index.html": "/eth-sweep/index.html",
+    "static/css/2.7b349aaa.chunk.css.map": "/eth-sweep/static/css/2.7b349aaa.chunk.css.map",
+    "static/css/main.113531c6.chunk.css.map": "/eth-sweep/static/css/main.113531c6.chunk.css.map",
+    "static/js/2.313d7d11.chunk.js.LICENSE.txt": "/eth-sweep/static/js/2.313d7d11.chunk.js.LICENSE.txt",
+    "static/media/bootstrap.css": "/eth-sweep/static/media/glyphicons-halflings-regular.be810be3.woff2"
+  },
+  "entrypoints": [
+    "static/js/runtime-main.4e62bfb6.js",
+    "static/css/2.7b349aaa.chunk.css",
+    "static/js/2.313d7d11.chunk.js",
+    "static/css/main.113531c6.chunk.css",
+    "static/js/main.fd90aec7.chunk.js"
+  ]
+}
