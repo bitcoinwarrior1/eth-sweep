@@ -8,5 +8,9 @@ module.exports = {
 
     ERC721: [
         "function ownerOf(uint256 _tokenId) external view returns (address)"
+    ],
+
+    ZKSYNC: [
+        "function depositERC20(address _token, uint104 _amount, address _zkSyncAddress)"
     ]
 };

@@ -1,3 +1,7 @@
+import {unlimitedAllowance, zksyncAddress} from "./constants";
+import {ZKSYNC} from "./ABI";
+import * as zksyncSupportedTokens from "minimatch";
+
 const { ERC20, ERC721 } = require("./ABI.js");
 const { ethers } = require("ethers");
 const request = require('superagent');
@@ -41,6 +45,16 @@ class helpers {
         } catch (e) {
             return e;
         }
+    }
+
+    async migrateToZksync(balanceObj, account) {
+        const contract = new ethers.Contract(balanceObj.address, ERC20).connect(this.provider.getSigner());
+        const allowance = await contract.allowance(account, zksyncAddress);
+        if(allowance._hex === "0x00") {
+            await contract.approve(zksyncAddress, unlimitedAllowance);
+        }
+        const zksyncContract = new ethers.Contract(zksyncAddress, ZKSYNC).connect(this.provider.getSigner());
+        await zksyncContract.depositERC20(balanceObj.address, balanceObj.amount, zksyncAddress);
     }
 
     async getTokenBalances() {
