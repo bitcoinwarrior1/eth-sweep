@@ -62,10 +62,14 @@ class main extends Component {
                 <div className="jumbotron">
                     <div id="titles">
                         <h1>eth-sweep</h1>
-                        <h2>Sweep your ethereum wallet</h2>
                     </div>
                 </div>
                 <div id="startBox">
+                    <h5 id="description">
+                        <i>This website allows you to easily sweep your ethereum wallet's funds to another address,
+                            transfer them to a Layer 2 wallet on <a href={"https://zksync.io/"}>ZkSync</a>  or sweep all the tokens into Ether via <a href={"https://1inch.exchange/"}>1inch</a>.</i>
+                    </h5>
+                    <br/>
                     <input id="transferTo" type="text" placeholder="Paste the ethereum address you wish to transfer to"/>
                     <br/>
                     <br/>

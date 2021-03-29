@@ -6,6 +6,11 @@
   width: 25em;
 }
 
+#description {
+  margin-left:5%;
+  margin-right:5%;
+}
+
 #page {
   margin:5%;
 }
