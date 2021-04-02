@@ -1,12 +1,9 @@
-import {unlimitedAllowance, zksyncAddress} from "./constants";
-import {ZKSYNC} from "./ABI";
-import * as zksyncSupportedTokens from "minimatch";
-
-const { ERC20, ERC721 } = require("./ABI.js");
+const { unlimitedAllowance, zksyncAddress, OneInchAPIURL, ethAddress } = require("./constants");
+const { ZKSYNC, ERC20, ERC721 } = require("./ABI.js");
 const { ethers } = require("ethers");
 const request = require('superagent');
 
-class helpers {
+module.exports = class helpers {
 
     constructor(provider, account, APIKeyString, to, chainId) {
         this.provider = provider;
@@ -38,18 +35,68 @@ class helpers {
         }
     }
 
-    async transferToken(to, balanceObj) {
+    async transferToken(balanceObj) {
         try {
             const contract = new ethers.Contract(balanceObj.address, ERC20).connect(this.provider.getSigner());
-            return contract.transfer(to, balanceObj.balance);
+            return contract.transfer(this.to, balanceObj.balance);
         } catch (e) {
             return e;
         }
     }
 
-    async migrateToZksync(balanceObj, account) {
+    async tradeToEthWith1Inch(balanceObj) {
+        const { tx, approvalAddress } = await this.get1InchTradeData(balanceObj);
+        if(approvalAddress) {
+            const tokenContract = new ethers.Contract(balanceObj.address, ERC20).connect(this.provider.getSigner());
+            await tokenContract.approve(approvalAddress, unlimitedAllowance);
+            // now that we are approved, try again
+            await this.tradeToEthWith1Inch(balanceObj);
+        } else {
+            return this.provider.sendTransaction(tx);
+        }
+    }
+
+    async get1InchTradeData(balanceObj) {
+        try {
+            const query = `${OneInchAPIURL}/swap?fromTokenAddress=${balanceObj.address}&toTokenAddress=${ethAddress}&amount=${balanceObj.balance.toString()}&fromAddress=${this.account}&slippage=${5}`;
+            const response = await request.get(query);
+            const tx = response.body.tx;
+            const DEXAddress = tx.to;
+            return {
+                response: response,
+                tx: tx,
+                DEXAddress: DEXAddress
+            }
+        } catch(e) {
+            console.error(e);
+            const message = JSON.parse(e.response.text).message;
+            if(message.includes("Not enough allowance")) {
+                return {
+                    approvalAddress: message.substring(message.length - 42)
+                }
+            }
+        }
+
+    }
+
+    async getQuoteInEth1Inch(balanceObj) {
+        try {
+            const query = `${OneInchAPIURL}/quote?fromTokenAddress=${balanceObj.address}&toTokenAddress=${ethAddress}&amount=${balanceObj.balance.toString()}`;
+            const result = await request.get(query);
+            return result.body.toTokenAmount / 1e18;
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    async migrateEthtoL2(balance) {
+        const zksyncContract = new ethers.Contract(zksyncAddress, ZKSYNC).connect(this.provider.getSigner());
+        await zksyncContract.depositETH(this.to, { value: balance });
+    }
+
+    async migrateToZksync(balanceObj) {
         const contract = new ethers.Contract(balanceObj.address, ERC20).connect(this.provider.getSigner());
-        const allowance = await contract.allowance(account, zksyncAddress);
+        const allowance = await contract.allowance(this.account, zksyncAddress);
         if(allowance._hex === "0x00") {
             await contract.approve(zksyncAddress, unlimitedAllowance);
         }
@@ -98,6 +145,7 @@ class helpers {
         let erc20Balances = [];
         for(const index in erc20Contracts.contractAddresses) {
             let contractAddress = erc20Contracts.contractAddresses[index];
+            //TODO too slow, get balances by batch
             let balance = await this.getERC20Balance(contractAddress);
             let balanceObj = {};
             balanceObj.decimals = erc20Contracts.decimals[index];
@@ -131,7 +179,6 @@ class helpers {
         }
     }
 
-    //get's all the tokens a user has interacted with
     async getERC20Tokens() {
         let erc20Query = this.getQueryERC20Events(this.chainId, this.account);
         try {
@@ -139,7 +186,7 @@ class helpers {
             let tokens = [];
             let tokenNames = [];
             let tokenDecimals = [];
-            let call = await request(erc20Query);
+            let call = await request.get(erc20Query);
             let results = call.body.result;
             for(let result of results) {
                 if(!tokens.includes(result.contractAddress)) {
@@ -165,7 +212,7 @@ class helpers {
             let tokenNames = [];
             let tokenDecimals = [];
             let tokenIds = {}; // NB: this must be checked to see if still owned
-            let call = await request(erc721Query);
+            let call = await request.get(erc721Query);
             let results = call.body.result;
             for(let result of results) {
                 tokens.push(result.contractAddress);
@@ -218,5 +265,3 @@ class helpers {
         }
     }
 }
-
-export default helpers;

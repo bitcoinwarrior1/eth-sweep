@@ -29,7 +29,8 @@ class sweep extends Component {
                     <div className="grid-items">{this.props.balance / 1e18}</div>
                     <div className="grid-items">Ether</div>
                     <div className="grid-items">
-                        <button className="btn btn-danger" id="sweepAllETH" onClick={ () => { this.props.helpers.sendAllEth().then(console.log).catch(console.error) } }>Sweep All ETH</button>
+                        <button className="btn btn-primary" id="sweepAllETH" onClick={ () => { this.props.helpers.sendAllEth().then(console.log).catch(console.error) } }>Transfer</button>
+                        <button className="btn btn-danger" id="migrateEthToL2" onClick={ () => { this.props.helpers.migrateEthtoL2(this.props.balance).then(console.log).catch(console.error) } }>Migrate to L2</button>
                     </div>
                 </div>
                 <div className="grid-container">
