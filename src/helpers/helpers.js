@@ -1,9 +1,9 @@
-const { unlimitedAllowance, zksyncAddress, OneInchAPIURL, ethAddress } = require("./constants");
-const { ZKSYNC, ERC20, ERC721 } = require("./ABI.js");
-const { ethers } = require("ethers");
-const request = require('superagent');
+import { unlimitedAllowance, zksyncAddress, OneInchAPIURL, ethAddress } from "./constants";
+import { ZKSYNC, ERC20, ERC721 } from "./ABI.js";
+import { ethers } from "ethers";
+import request from 'superagent';
 
-module.exports = class helpers {
+class helpers {
 
     constructor(provider, account, APIKeyString, to, chainId) {
         this.provider = provider;
@@ -90,8 +90,11 @@ module.exports = class helpers {
     }
 
     async migrateEthtoL2(balance) {
+        const gasPrice = await this.provider.getGasPrice();
+        const gasLimit = 59476;
+        const value = balance - (gasPrice * gasLimit);
         const zksyncContract = new ethers.Contract(zksyncAddress, ZKSYNC).connect(this.provider.getSigner());
-        await zksyncContract.depositETH(this.to, { value: balance });
+        await zksyncContract.depositETH(this.to, { value: value.toString() });
     }
 
     async migrateToZksync(balanceObj) {
@@ -265,3 +268,5 @@ module.exports = class helpers {
         }
     }
 }
+
+export default helpers;

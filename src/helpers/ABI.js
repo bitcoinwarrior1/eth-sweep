@@ -12,6 +12,6 @@ module.exports = {
 
     ZKSYNC: [
         "function depositERC20(address _token, uint104 _amount, address _zkSyncAddress)",
-        "function depositETH(address _franklinAddr)"
+        "function depositETH(address _franklinAddr) payable"
     ]
 };

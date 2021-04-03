@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import '../App.css';
 import { ethers } from 'ethers';
-import Helpers from '../helpers/helpers';
+import helpers from '../helpers/helpers';
 import Sweep from './sweep';
 const APIKeyString = "&apikey=ANVBH7JCNH1BVHJ1NPB5FH1WKP5C6YSYJW";
 
@@ -27,9 +27,9 @@ class main extends Component {
         const balance = await provider.getBalance(accounts[0]);
         this.setState({ balance: balance });
         this.setState({ account: accounts[0] });
-        const helpers = new Helpers(provider, accounts[0], APIKeyString, this.state.to, parseInt(window.ethereum.chainId));
-        this.setState({ helpers: helpers });
-        const balancesMapping = await helpers.getTokenBalances();
+        const h = new helpers(provider, accounts[0], APIKeyString, this.state.to, parseInt(window.ethereum.chainId));
+        this.setState({ helpers: h });
+        const balancesMapping = await h.getTokenBalances();
         this.setState({ balancesMapping: balancesMapping });
         document.getElementById("loading").hidden = true;
     }

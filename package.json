@@ -19,7 +19,7 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "test-helpers": "mocha --exit --recursive --timeout 500000",
+    "test-helpers": "mocha --exit --recursive --timeout 500000 -r esm",
     "eject": "react-scripts eject",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d build"
@@ -44,6 +44,7 @@
   },
   "devDependencies": {
     "chai": "^4.3.4",
+    "esm": "^3.2.25",
     "gh-pages": "^3.1.0",
     "mocha": "^8.3.2"
   }

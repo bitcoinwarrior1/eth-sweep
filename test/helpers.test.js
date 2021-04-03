@@ -1,8 +1,7 @@
-const { parseEther } = require("@ethersproject/units");
-const { expect } = require("chai/index");
-const Helpers = require('../src/helpers/helpers');
-const { ethers } = require('ethers');
-const { nullAddress } = require("../src/helpers/constants");
+import { parseEther } from '@ethersproject/units';
+import { expect } from 'chai';
+import Helpers from '../src/helpers/helpers';
+import { ethers } from 'ethers';
 
 describe("helper tests", () => {
 
