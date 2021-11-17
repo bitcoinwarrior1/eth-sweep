@@ -248,6 +248,8 @@ class helpers {
                 return "https://rinkeby.etherscan.io/api?module=account&action=tokentx&address=" + this.account + this.APIKeyString;
             case 42:
                 return "https://kovan.etherscan.io/api?module=account&action=tokentx&address=" + this.account + this.APIKeyString;
+            case 56:
+                return "https://api.bscscan.com/api?module=account&action=tokentx&address=" + this.account; //+ this.APIKeyString; // TODO get new api key for bsc
             default:
                 return "https://api.etherscan.io/api?module=account&action=tokentx&address=" + this.account + this.APIKeyString;
         }
@@ -263,6 +265,8 @@ class helpers {
                 return "https://rinkeby.etherscan.io/api?module=account&action=tokennfttx&address=" + this.account + this.APIKeyString;
             case 42:
                 return "https://kovan.etherscan.io/api?module=account&action=tokennfttx&address=" + this.account + this.APIKeyString;
+            case 56:
+                return "https://api.bscscan.com/api?module=account&action=tokennfttx&address=" + this.account; //+ this.APIKeyString; // TODO get new api key for bsc
             default:
                 return "https://api.etherscan.io/api?module=account&action=tokennfttx&address=" + this.account + this.APIKeyString;
         }
