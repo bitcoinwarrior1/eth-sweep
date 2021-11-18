@@ -64,6 +64,11 @@ class main extends Component {
                         <h1>eth-sweep</h1>
                     </div>
                 </div>
+                <div id="gh">
+                    <a href="https://github.com/James-Sangalli/eth-sweep" target="_blank">
+                        <img alt="GitHub" src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Octicons-mark-github.svg/2048px-Octicons-mark-github.svg.png" width="40" height="40"/>
+                    </a>
+                </div>
                 <div id="startBox">
                     <h5 id="description">
                         <i>This website allows you to easily sweep your ethereum wallet's funds to another address,

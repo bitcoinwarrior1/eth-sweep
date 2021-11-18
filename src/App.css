@@ -1,6 +1,10 @@
 #titles {
   text-align: center;
 }
+#gh {
+  text-align: center;
+  margin-bottom: 1%;
+}
 
 #transferTo {
   width: 25em;
